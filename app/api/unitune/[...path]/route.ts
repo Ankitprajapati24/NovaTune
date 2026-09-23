@@ -51,7 +51,7 @@ async function route(r:Request){
   if(method==="POST"||method==="PUT"){
    const b=await body(r),tracks=validTracks(b.tracks);if(!tracks.length)throw new HttpError("Add at least one song first.");const photoId=b.photoId?validId(b.photoId):null;
    if(photoId&&!await db().prepare("SELECT id FROM photos WHERE id = ? AND owner = ?").bind(photoId,me).first())throw new HttpError("Please upload your photo again.",403);
-   const data={name:String(b.name||"Someone special").trim().slice(0,70),message:String(b.message||"a soundtrack for us.").trim().slice(0,180),photoId,position:Math.max(0,Math.min(100,Number(b.position)||50)),effect:b.effect==="hearts"?"hearts":"stars",tracks};
+   const data={name:String(b.name||"Someone special").trim().slice(0,70),message:String(b.message||"a soundtrack for us.").trim().slice(0,180),photoId,background:b.background==="rk"?"rk":"rooftop",position:Math.max(0,Math.min(100,Number(b.position)||50)),effect:b.effect==="hearts"?"hearts":"stars",tracks};
    if(method==="PUT"){const changed=await db().prepare("UPDATE shares SET data = ? WHERE id = ? AND owner = ?").bind(JSON.stringify(data),validId(path[1]),me).run();if(!changed.meta.changes)throw new HttpError("You cannot edit this dedication.",403);return json({id:path[1],...data});}
    const count=await db().prepare("SELECT COUNT(*) AS n FROM shares WHERE owner = ?").bind(me).first<{n:number}>();if((count?.n||0)>=30)throw new HttpError("Remove an old dedication before creating another.");const id=newId();await db().prepare("INSERT INTO shares(id,owner,data,created) VALUES(?,?,?,?)").bind(id,me,JSON.stringify(data),Date.now()).run();return json({id,...data},201);
   }
