@@ -19,7 +19,7 @@ type Room={id:string;tracks:Track[];active:number;playing:boolean;position:numbe
 async function api(path:string,options:RequestInit={}):Promise<any>{const r=await fetch(`/api/unitune/${path}`,{...options,headers:{...(typeof options.body==="string"?{"Content-Type":"application/json"}:{}),...options.headers}});const data=await r.json() as any;if(!r.ok)throw new Error(data.error||"Please try again.");return data;}
 const errorText=(e:unknown)=>e instanceof Error?e.message:"Something went wrong. Please try again.";
 const emptyGift:Gift={name:"",message:"a soundtrack for us.",photoId:null,background:"rooftop",position:50,effect:"stars",tracks:[]};
-const stationPlaylist="https://www.youtube.com/playlist?list=RDsCH-maZdhc8";
+const stationPlaylist="https://www.youtube.com/playlist?list=PL9bw4S5ePsEGpT9PdWJYN8joMa2eWAxJf";
 export default function Novatune(){
  const [time,setTime]=useState(""),[panel,setPanel]=useState(""),[tab,setTab]=useState("queue"),[link,setLink]=useState(""),[loading,setLoading]=useState(false);
  const [config,setConfig]=useState({signedIn:false,name:"",spotifyClientId:"",youtubeSearch:false});
