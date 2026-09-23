@@ -19,6 +19,7 @@ type Room={id:string;tracks:Track[];active:number;playing:boolean;position:numbe
 async function api(path:string,options:RequestInit={}):Promise<any>{const r=await fetch(`/api/unitune/${path}`,{...options,headers:{...(typeof options.body==="string"?{"Content-Type":"application/json"}:{}),...options.headers}});const data=await r.json() as any;if(!r.ok)throw new Error(data.error||"Please try again.");return data;}
 const errorText=(e:unknown)=>e instanceof Error?e.message:"Something went wrong. Please try again.";
 const emptyGift:Gift={name:"",message:"a soundtrack for us.",photoId:null,position:50,effect:"stars",tracks:[]};
+const stationPlaylist="https://www.youtube.com/playlist?list=RDsCH-maZdhc8";
 export default function Novatune(){
  const [time,setTime]=useState(""),[panel,setPanel]=useState(""),[tab,setTab]=useState("queue"),[link,setLink]=useState(""),[loading,setLoading]=useState(false);
  const [config,setConfig]=useState({signedIn:false,name:"",spotifyClientId:"",youtubeSearch:false});
@@ -58,6 +59,7 @@ export default function Novatune(){
   try{const saved=localStorage.getItem("novatune.library");if(saved){const data=JSON.parse(saved);if(Array.isArray(data.playlists)&&Array.isArray(data.liked))setLibrary(data);}}catch{}
   const params=new URLSearchParams(location.search);
   try{const c=await api("config");setConfig(c);if(c.signedIn){const [l,s]=await Promise.all([api("library"),api("shares")]);setLibrary(l);setShares(s.shares);}}catch(e){toast.error(errorText(e));}
+  try{const station=await api(`resolve?url=${encodeURIComponent(stationPlaylist)}`);if(Array.isArray(station.items)&&station.items.length){setQueue(station.items);queueRef.current=station.items;select(station.items[0],0,false);}}catch{}
   try{if(params.get("gift")){const g=await api(`shares/${params.get("gift")}`);setGift(g);if(g.isOwner)setDraft(g);setQueue(g.tracks);queueRef.current=g.tracks;select(g.tracks[0],0,false);}
    if(params.get("room")){const value=await api(`rooms/${params.get("room")}`);setRoom(value);setQueue(value.tracks);queueRef.current=value.tracks;select(value.tracks[value.active],value.active,false);setRoomLink(`${location.origin}/?room=${value.id}`);}
    const pending=sessionStorage.getItem("unitune.pending-link");if(pending&&!params.get("room")){sessionStorage.removeItem("unitune.pending-link");await loadLink(pending,false);}
