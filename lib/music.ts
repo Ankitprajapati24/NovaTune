@@ -23,7 +23,7 @@ export function parseMusicLink(input:string):Track {
  throw new Error("This version supports YouTube, YouTube Music and Spotify song/playlist links.");
 }
 export function validTracks(value:unknown):Track[]{
- if(!Array.isArray(value)||value.length>100)throw new Error("A playlist can have up to 100 entries.");
+ if(!Array.isArray(value)||value.length>500)throw new Error("A playlist can have up to 500 entries.");
  return value.map(v=>{if(!v||typeof v.url!=="string")throw new Error("Invalid music entry.");const parsed=parseMusicLink(v.url);return {...parsed,title:typeof v.title==="string"?v.title.slice(0,200):parsed.title,artist:typeof v.artist==="string"?v.artist.slice(0,200):parsed.artist};});
 }
 export function formatTime(s:number){const n=Math.max(0,Math.floor(s||0));return `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`;}
