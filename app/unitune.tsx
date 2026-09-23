@@ -25,6 +25,7 @@ export default function Novatune(){
  const [config,setConfig]=useState({signedIn:false,name:"",spotifyClientId:"",youtubeSearch:false});
  const [queue,setQueue]=useState<Track[]>(eveningTracks),[active,setActive]=useState(0),[selection,setSelection]=useState<Selection>({track:eveningTracks[0],play:false,nonce:0});
  const [volume,setVolume]=useState(70),[shuffle,setShuffle]=useState(false),[repeat,setRepeat]=useState(false);
+ const [restorePosition,setRestorePosition]=useState(0);
  const [library,setLibrary]=useState<Library>({playlists:[],liked:[]}),[playlistName,setPlaylistName]=useState(""),[search,setSearch]=useState(""),[results,setResults]=useState<Track[]>([]);
  const [gift,setGift]=useState<Gift>(emptyGift),[draft,setDraft]=useState<Gift>(emptyGift),[shares,setShares]=useState<Gift[]>([]),[shareLink,setShareLink]=useState(""),[room,setRoom]=useState<Room|null>(null),[roomLink,setRoomLink]=useState(""),[joined,setJoined]=useState(false),[roomStatus,setRoomStatus]=useState("");
  const [mood,setMood]=useState("A little love"),[effects,setEffects]=useState(true);
@@ -60,15 +61,19 @@ export default function Novatune(){
  }
  nextRef.current=()=>{if(isGuest)return;if(repeat){select(selectionRef.current.track,activeRef.current);return;}if(activeRef.current<queueRef.current.length-1||shuffle)move(1);else void publishRoom({playing:false,position:0});};
  useEffect(()=>{if(booted.current)return;booted.current=true;void(async()=>{
+  let restoredPlayer=false;
+  try{const saved=localStorage.getItem("novatune.player");if(saved){const data=JSON.parse(saved);if(Array.isArray(data.queue)&&data.queue.length&&data.queue.every((t:Track)=>t&&typeof t.url==="string")){const index=Math.max(0,Math.min(data.queue.length-1,Number(data.active)||0));setQueue(data.queue);queueRef.current=data.queue;select(data.queue[index],index,false);setVolume(Math.max(0,Math.min(100,Number(data.volume)||70)));setShuffle(!!data.shuffle);setRepeat(!!data.repeat);setRestorePosition(Math.max(0,Number(data.position)||0));restoredPlayer=true;}}}catch{}
   try{const saved=localStorage.getItem("novatune.library");if(saved){const data=JSON.parse(saved);if(Array.isArray(data.playlists)&&Array.isArray(data.liked))setLibrary(data);}}catch{}
   const params=new URLSearchParams(location.search);
   try{const c=await api("config");setConfig(c);if(c.signedIn){const [l,s]=await Promise.all([api("library"),api("shares")]);setLibrary(l);setShares(s.shares);}}catch(e){toast.error(errorText(e));}
-  try{const station=await api(`resolve?url=${encodeURIComponent(stationPlaylist)}`);if(Array.isArray(station.items)&&station.items.length){setQueue(station.items);queueRef.current=station.items;select(station.items[0],0,false);}}catch{}
+  if(!restoredPlayer)try{const station=await api(`resolve?url=${encodeURIComponent(stationPlaylist)}`);if(Array.isArray(station.items)&&station.items.length){setQueue(station.items);queueRef.current=station.items;select(station.items[0],0,false);}}catch{}
   try{if(params.get("gift")){const g=await api(`shares/${params.get("gift")}`);setGift(g);if(g.isOwner)setDraft(g);setQueue(g.tracks);queueRef.current=g.tracks;select(g.tracks[0],0,false);}
    if(params.get("room")){const value=await api(`rooms/${params.get("room")}`);setRoom(value);setQueue(value.tracks);queueRef.current=value.tracks;select(value.tracks[value.active],value.active,false);setRoomLink(`${location.origin}/?room=${value.id}`);}
    const pending=sessionStorage.getItem("unitune.pending-link");if(pending&&!params.get("room")){sessionStorage.removeItem("unitune.pending-link");await loadLink(pending,false);}
   }catch(e){toast.error(errorText(e));}
  })();},[]);
+ useEffect(()=>{if(restorePosition>0&&player.duration>0){player.seek(Math.min(restorePosition,player.duration-1));setRestorePosition(0);}},[restorePosition,player.duration]);
+ useEffect(()=>{const save=()=>{try{localStorage.setItem("novatune.player",JSON.stringify({queue:queueRef.current,active:activeRef.current,position:livePlayer.current.position,volume,shuffle,repeat}));}catch{}};const timer=window.setInterval(save,2000);window.addEventListener("pagehide",save);return()=>{save();window.clearInterval(timer);window.removeEventListener("pagehide",save);};},[volume,shuffle,repeat]);
  useEffect(()=>{const tick=()=>setTime(new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}));tick();const i=setInterval(tick,30000);return()=>clearInterval(i);},[]);
  useEffect(()=>{if(!room?.id)return;let gone=false;sessionId.current||=crypto.randomUUID().replaceAll("-","");
   const heartbeat=()=>api(`rooms/${room.id}/presence`,{method:"POST",body:JSON.stringify({id:sessionId.current})}).catch(()=>{});void heartbeat();
